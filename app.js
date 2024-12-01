@@ -1,7 +1,7 @@
 // Import Firebase modules
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-import { getFirestore, collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import { getFirestore, collection, getDocs, addDoc, query, where, getDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 // Firebase configuration
 const firebaseConfig = {
@@ -87,6 +87,20 @@ async function getAllUsers() {
   }
 }
 
+// Function to fetch a user by email
+async function getUserByEmail(email) {
+  try {
+    const q = query(collection(db, "users"), where("email", "==", email));
+    const querySnapshot = await getDocs(q);
+    const user = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))[0];
+    console.log("Fetched user:", user);
+    return user;
+  } catch (error) {
+    console.error("Error fetching user by email:", error);
+    return null;
+  }
+}
+
 // Function to show all users in a table
 async function showUsers() {
   const users = await getAllUsers();
@@ -127,3 +141,40 @@ async function showUsers() {
 
 // Call showUsers to fetch and display users
 showUsers();
+
+// Login function
+async function login() {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  if (!email || !password) {
+    alert("Please fill out both email and password fields.");
+    return;
+  }
+
+  try {
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+    console.log("Signed in successfully:", user);
+
+    // Fetch additional user data
+    const userData = await getUserByEmail(email);
+    console.log("Fetched user data:", userData);
+    if (userData.role === 'doctor') {
+          window.location.pathname = "./doctor.html";
+    } else {
+          window.location.pathname = "./users.html";
+    }
+
+    // Save to session storage and redirect
+    sessionStorage.setItem("user", JSON.stringify(userData));
+    alert("Logged in successfully!");
+    // window.location.pathname = "./welcome.html";
+  } catch (error) {
+    console.error("Login error:", error.message);
+    alert("Error: " + error.message);
+  }
+}
+
+// Attach event listener to login button
+document.getElementById("loginButton")?.addEventListener("click", login);
